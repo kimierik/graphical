@@ -5,7 +5,7 @@ use crate::imagefilter;
 use std::cmp::Ordering;
 use std::ops::Index;
 
-use rand::Rng;
+pub mod mask;
 
 
 #[derive(Eq)]

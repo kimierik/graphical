@@ -5,6 +5,7 @@ pub mod filters;
 
 
 use filters::PixelSort;
+use filters::mask::Mask;
 use imagefilter::ImageFilter;
 
 struct EditorWidget{
@@ -60,7 +61,7 @@ impl eframe::App for EditorWidget{
                 if ui.button("add filter").clicked(){
                     self.filterlist.push(match self.hovered_filter {
                         Filters::PixelSort=>Box::new(PixelSort::make_with_id(rand::random::<u32>().to_string())),
-                        Filters::Mask=>todo!("mask not implementesd")
+                        Filters::Mask=>Box::new(Mask::make_with_id(rand::random::<u32>().to_string())),
                     })
                 }
 
