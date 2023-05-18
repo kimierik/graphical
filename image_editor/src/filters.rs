@@ -2,42 +2,19 @@
 
 use crate::imagefilter;
 
-use std::cmp::Ordering;
-use std::ops::Index;
 
 pub mod mask;
 
-
-#[derive(Eq)]
-struct Piece{
-    val:u8,
-    index:u16,
-}
-
-impl Ord for Piece {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.val.cmp(&other.val) 
-    }
-}
-
-
-impl PartialOrd for Piece {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Piece {
-    fn eq(&self, other: &Self) -> bool {
-        self.val==other.val
-    }
-}
 
 
 #[derive(Debug,Clone, Copy, PartialEq)]
 pub enum SortMethod{
     Hue,
     Vibrance,
+    Saturation,
+    Red,
+    Green,
+    Blue,
 }
 
 
@@ -69,36 +46,21 @@ impl PixelSort{
     }
 
 
-    fn sort_pixel_vector(&self,vector:Vec<image::Rgb<u8>>)->Vec<image::Rgb<u8>>{
-        let mut secvec:Vec<Piece>=vec![];
+    fn sort_pixel_vector(&self,vector: &mut Vec<image::Rgb<u8>>){
+        match self.sorting_method {
+            SortMethod::Vibrance=>vector.sort_by(|a,b| rgb_to_hsl(a).2.partial_cmp(&rgb_to_hsl(b).2).unwrap()),
+            SortMethod::Hue=>vector.sort_by(|a,b| rgb_to_hsl(a).0.partial_cmp(&rgb_to_hsl(b).0).unwrap()),
+            SortMethod::Saturation=>vector.sort_by(|a,b| rgb_to_hsl(a).1.partial_cmp(&rgb_to_hsl(b).1).unwrap()),
 
-        let mut i=0;//cahgne to enumberage
-        for item in vector.iter(){
+            //a.0 = rgb array a.0[0] =red
+            SortMethod::Red=>vector.sort_by(|a,b| a.0[0].partial_cmp(&b.0[0]).unwrap()),
+            SortMethod::Green=>vector.sort_by(|a,b| a.0[1].partial_cmp(&b.0[1]).unwrap()),
+            SortMethod::Blue=>vector.sort_by(|a,b| a.0[2].partial_cmp(&b.0[2]).unwrap()),
 
-            //let total = get_luminance(item);
-            let total = match self.sorting_method {
-                SortMethod::Vibrance=>get_luminance(item),
-                SortMethod::Hue=>get_hue(item),
-                
-            };
-
-
-            let a =Piece{val:total,index:i};
-            secvec.push(a);
-            i+=1;
         }
-
-
-        secvec.sort(); 
-        
-        let mut retvec:Vec<image::Rgb<u8>>=vec![];
-        for (_ind,item) in secvec.iter().enumerate(){
-            retvec.push(vector.index(item.index as usize).clone());
-        }
-
-
-        retvec
     }
+
+
 
 }
 
@@ -126,38 +88,39 @@ fn get_luminance(pixel:&image::Rgb<u8>)->u8{
         total
 }
 
+fn rgb_to_hsl(pixel:&image::Rgb<u8>) -> (f32, f32, f32) {
+    let (r, g, b) = (pixel.0[0] as f32 / 255.0, pixel.0[1] as f32 / 255.0, pixel.0[2] as f32 / 255.0);
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let mut h = (max + min) / 2.0;
+    let s ;
+    let l = h;
 
-//this does not get hue accurately.. at all but the results are kinda cool
-fn get_hue(pixel:&image::Rgb<u8>)->u8{
-    let r=pixel.0[0] / 255;
-    let g=pixel.0[1] / 255;
-    let b=pixel.0[2] / 255;
-    let mut arra=[r,g,b];
+    if max == min {
+        h = 0.0;
+        s = 0.0;
+    } else {
+        let d = max - min;
+        s = if l > 0.5 { d / (2.0 - max - min) } else { d / (max + min) };
 
-    arra.sort();
+        match max {
+            _ if max == r => h = (g - b) / d + (if g < b { 6.0 } else { 0.0 }),
+            _ if max == g => h = (b - r) / d + 2.0,
+            _ if max == b => h = (r - g) / d + 4.0,
+            _ => (),
+        }
 
-    let mut hue:u8=0;
-    //what is biggest and what is smalles
-    //put in array and sort
-    //
-    if arra[2]-arra[0]==0 {
-        return 0
+        h /= 6.0;
     }
 
-    if arra[0]==r {
-        hue = (g-b)/(arra[2]-arra[0])
-    }
-
-    if arra[0]==g{
-        hue = 2+(b-r)/(arra[2]-arra[0])
-    }
-
-    if arra[0]==b{
-        hue = 4+(r-g)/(arra[2]-arra[0])
-    }
-    hue
+    (h, s, l)
 }
 
+
+
+
+
+//this does not get hue accurately.. at all but the results are kinda cool
 
 
 
@@ -219,7 +182,7 @@ impl imagefilter::ImageFilter for PixelSort{
             }
 
             //sort
-            let sorted_thing=self.sort_pixel_vector(buffer);
+            self.sort_pixel_vector(&mut buffer);
 
             //reassign
             let mut ind=0;
@@ -228,7 +191,7 @@ impl imagefilter::ImageFilter for PixelSort{
                 let mpix=mask.get_pixel_mut(x, y);
                 if mpix.0[0]+mpix.0[1]+mpix.0[2]!=0{
                     let pixel= asdf.get_pixel_mut(x, y);
-                    *pixel=sorted_thing[ind];
+                    *pixel=buffer[ind];
                     ind+=1;
                 }
             }
@@ -247,15 +210,14 @@ impl imagefilter::ImageFilter for PixelSort{
                .show_ui(ui, |ui|{
                    ui.selectable_value(&mut self.sorting_method, SortMethod::Vibrance, "vib");
                    ui.selectable_value(&mut self.sorting_method, SortMethod::Hue, "hue");
+                   ui.selectable_value(&mut self.sorting_method, SortMethod::Saturation, "saturation");
+
+                   ui.selectable_value(&mut self.sorting_method, SortMethod::Red, "red");
+                   ui.selectable_value(&mut self.sorting_method, SortMethod::Green, "green");
+                   ui.selectable_value(&mut self.sorting_method, SortMethod::Blue, "blue");
            });
         });
 
-            /*
-            if ui.button("sort ").clicked() {
-                self.sort_image();
-                self.save_image();
-            }
-             * */
         
     }
 
