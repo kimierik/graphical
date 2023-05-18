@@ -32,8 +32,8 @@ pub struct PixelSort{
 
     pub widgetid:String,
 
-    min_mask:u8,
-    max_mask:u8,
+    min_mask:f32,
+    max_mask:f32,
 
 }
 
@@ -72,8 +72,8 @@ impl Default for PixelSort{
     fn default() -> Self {
         Self {
             widgetid:"".to_string(),
-            max_mask:250,
-            min_mask:100,
+            max_mask:250.0,
+            min_mask:100.0,
             sorting_method:SortMethod::Vibrance,
         }
     }
@@ -130,11 +130,21 @@ impl imagefilter::ImageFilter for PixelSort{
             for x in minx..maxx{
                 let pix=mask.get_pixel_mut(x, y);
 
-                let lum=get_luminance(&*pix);
+                let lum=match self.sorting_method {
+                    SortMethod::Vibrance=>rgb_to_hsl(&*pix).2,
+                    SortMethod::Hue=>rgb_to_hsl(&*pix).0,
+                    SortMethod::Saturation=>rgb_to_hsl(&*pix).1,
+
+                    //a.0 = rgb array a.0[0] =red
+                    SortMethod::Red=>pix.0[0] as f32,
+                    SortMethod::Green=>pix.0[1] as f32,
+                    SortMethod::Blue=>pix.0[2] as f32,
+                    
+                };
 
                 //mask
                 //we need to check first changed and last changed 
-                if lum<maskmax && lum>maskmin { 
+                if lum <maskmax && lum > maskmin { 
                     if mask_first==99999999{
                         mask_first=x;
                     }
@@ -169,8 +179,24 @@ impl imagefilter::ImageFilter for PixelSort{
 
     fn spawn_filter_widget(&mut self,ui:&mut egui::Ui) {
         ui.heading("Pixel Sorting");
-        ui.add(egui::Slider::new(&mut self.min_mask, 0..=255).text("min"));
-        ui.add(egui::Slider::new(&mut self.max_mask, self.min_mask..=255).text("max"));
+        let min_selector:f32;
+        let max_selector:f32;
+
+        match self.sorting_method {
+            SortMethod::Vibrance=>{min_selector=0.0;max_selector=255.0},
+            SortMethod::Hue=>{min_selector=0.0;max_selector=360.0},
+            SortMethod::Saturation=>{min_selector=0.0;max_selector=1.0}
+
+            //a.0 = rgb array a.0[0] =red
+            SortMethod::Red=>{min_selector=0.0;max_selector=255.0},
+            SortMethod::Green=>{min_selector=0.0;max_selector=255.0},
+            SortMethod::Blue=>{min_selector=0.0;max_selector=255.0},
+            
+        }
+
+
+        ui.add(egui::Slider::new(&mut self.min_mask, min_selector..=max_selector).text("min"));
+        ui.add(egui::Slider::new(&mut self.max_mask, self.min_mask..=max_selector).text("max"));
                 
         ui.push_id(&self.widgetid, |ui|{ 
             egui::ComboBox::from_label(format!("sorting method {}",self.widgetid))
