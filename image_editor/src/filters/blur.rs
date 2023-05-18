@@ -65,15 +65,14 @@ impl Blur{
 
         for offset_y in -radius..radius{
 
-            let comp_y= y+offset_y as u32;
+            let comp_y= y as i32 +offset_y ;
 
             for offset_x in -radius..radius{
-                let comp_x= x+offset_x as u32 ;
+                let comp_x= x as i32 + offset_x ;
 
-                if comp_x>0 && comp_x< img.width() {
-                    if comp_y>0 && comp_y< img.height() {
-                        offsets.push( *img.get_pixel(comp_x,comp_y));
-
+                if comp_x>=0 && comp_x <= img.width() as i32{
+                    if comp_y>=0 && comp_y <= img.height() as i32 {
+                        offsets.push( *img.get_pixel(comp_x as u32,comp_y as u32));
                     }
                 }
             }
