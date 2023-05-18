@@ -2,11 +2,13 @@
 pub mod imagefilter;
 
 pub mod filters;
+pub mod utils;
 
 
 use filters::PixelSort;
 use filters::mask::Mask;
-use imagefilter::ImageFilter;
+
+
 
 struct EditorWidget{
     filename:String,
@@ -121,5 +123,5 @@ fn main() {
     };
 
     eframe::run_native("app", options,
-        Box::new(|_cc| Box::new(EditorWidget::default())));
+        Box::new(|_cc| Box::new(EditorWidget::default()))).unwrap();
 }

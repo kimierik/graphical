@@ -2,8 +2,6 @@
 use crate::imagefilter;
 
 
-
-
 pub struct Mask{
 
     pub widgetid:String,
