@@ -7,6 +7,7 @@ pub mod utils;
 
 use filters::PixelSort;
 use filters::mask::Mask;
+use filters::blur::Blur;
 
 
 
@@ -37,6 +38,7 @@ impl EditorWidget{ }
 enum Filters{
     PixelSort,
     Mask,
+    Blur,
 }
 
 
@@ -59,11 +61,13 @@ impl eframe::App for EditorWidget{
                    .show_ui(ui, |ui|{
                        ui.selectable_value(&mut self.hovered_filter, Filters::PixelSort, "pixelsort");
                        ui.selectable_value(&mut self.hovered_filter, Filters::Mask, "mask");
+                       ui.selectable_value(&mut self.hovered_filter, Filters::Blur, "bluie");
                    });
                 if ui.button("add filter").clicked(){
                     self.filterlist.push(match self.hovered_filter {
                         Filters::PixelSort=>Box::new(PixelSort::make_with_id(rand::random::<u32>().to_string())),
                         Filters::Mask=>Box::new(Mask::make_with_id(rand::random::<u32>().to_string())),
+                        Filters::Blur=>Box::new(Blur{})
                     })
                 }
 

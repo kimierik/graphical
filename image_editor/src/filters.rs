@@ -5,6 +5,8 @@ use crate::imagefilter;
 
 pub mod mask;
 
+pub mod blur;
+
 
 use crate::utils::rgb_to_hsl;
 
@@ -78,21 +80,6 @@ impl Default for PixelSort{
         }
     }
 }
-
-
-
-fn get_luminance(pixel:&image::Rgb<u8>)->u8{
-        let val1=(0.2126*pixel.0[0] as f32  ) as u8;
-        let val2=(0.7152*pixel.0[1] as f32  ) as u8;
-        let val3=(0.0722*pixel.0[2] as f32  ) as u8;
-        let total = val1+val2+val3 ;
-        total
-}
-
-
-
-
-
 
 
 
