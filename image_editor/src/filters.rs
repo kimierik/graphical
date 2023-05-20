@@ -170,7 +170,7 @@ impl imagefilter::ImageFilter for PixelSort{
         let max_selector:f32;
 
         match self.sorting_method {
-            SortMethod::Vibrance=>{min_selector=0.0;max_selector=255.0},
+            SortMethod::Vibrance=>{min_selector=0.0;max_selector=1.0},
             SortMethod::Hue=>{min_selector=0.0;max_selector=360.0},
             SortMethod::Saturation=>{min_selector=0.0;max_selector=1.0}
 
