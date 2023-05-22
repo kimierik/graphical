@@ -67,7 +67,7 @@ impl eframe::App for EditorWidget{
                     self.filterlist.push(match self.hovered_filter {
                         Filters::PixelSort=>Box::new(PixelSort::make_with_id(rand::random::<u32>().to_string())),
                         Filters::Mask=>Box::new(Mask::make_with_id(rand::random::<u32>().to_string())),
-                        Filters::Blur=>Box::new(Blur{})
+                        Filters::Blur=>Box::new(Blur::default())
                     })
                 }
 

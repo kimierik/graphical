@@ -5,7 +5,18 @@ use std::{vec, print, println};
 
 use crate::imagefilter::ImageFilter;
 
-pub struct Blur{ }
+pub struct Blur{
+    radius:u32,
+}
+
+
+
+impl Default for Blur{
+    fn default() -> Self {
+        Blur{ radius:1}
+    }
+
+}
 
 
 
@@ -21,7 +32,6 @@ impl ImageFilter for Blur{
         let miny=0;
         let maxy=image.height();
 
-        let radius:i32=1;
 
         for y in miny..maxy{
             for x in minx..maxx{
@@ -30,7 +40,7 @@ impl ImageFilter for Blur{
                 //that now
                 //get average r,g&b . that is the rgb values for newimage pixel at x,y
 
-                let ofs=self.get_offsets(x,y,radius,&image);
+                let ofs=self.get_offsets(x,y,self.radius as i32,&image);
                 //get average r,g,b from the vector of pixels
                 if ofs.len()>0{
                     let pix=newimage.get_pixel_mut(x, y);
@@ -48,8 +58,7 @@ impl ImageFilter for Blur{
 
     fn spawn_filter_widget(&mut self,ui:&mut egui::Ui) {
         ui.heading("mask");
-        ui.heading("new options coming soon");
-        
+        ui.add(egui::Slider::new(&mut self.radius, 0..=10).text("blur radius"));
     }
 
 }
@@ -70,8 +79,8 @@ impl Blur{
             for offset_x in -radius..radius{
                 let comp_x= x as i32 + offset_x ;
 
-                if comp_x>=0 && comp_x <= img.width() as i32{
-                    if comp_y>=0 && comp_y <= img.height() as i32 {
+                if comp_x>=0 && comp_x < img.width() as i32{
+                    if comp_y>=0 && comp_y < img.height() as i32 {
                         offsets.push( *img.get_pixel(comp_x as u32,comp_y as u32));
                     }
                 }
