@@ -4,7 +4,7 @@ use crate::imagefilter;
 
 
 pub mod mask;
-
+pub mod pixelate;
 pub mod blur;
 
 
@@ -103,7 +103,6 @@ impl imagefilter::ImageFilter for PixelSort{
         let maskmin=self.min_mask;
         let maskmax=self.max_mask;
 
-        //could possiubly be clone of asdf not just another intorgb
         let mut mask= asdf.clone();
 
         //loop all rows
@@ -143,7 +142,6 @@ impl imagefilter::ImageFilter for PixelSort{
                     *pix = image::Rgb([0,0,0]);
                 }
 
-                //prob can be removed and moved to the if inside lum thing
             }
 
             //sort

@@ -1,7 +1,7 @@
 
 
 
-use std::{vec, print, println};
+use std::{vec,println};
 
 use crate::imagefilter::ImageFilter;
 
@@ -36,8 +36,6 @@ impl ImageFilter for Blur{
         for y in miny..maxy{
             for x in minx..maxx{
                 //get surroinding pixel
-                //eventually we should be able to say get aver pixel at radius but lets not do
-                //that now
                 //get average r,g&b . that is the rgb values for newimage pixel at x,y
 
                 let ofs=self.get_offsets(x,y,self.radius as i32,&image);

@@ -8,6 +8,7 @@ pub mod utils;
 use filters::PixelSort;
 use filters::mask::Mask;
 use filters::blur::Blur;
+use filters::pixelate::PixelateFilter;
 
 
 
@@ -39,6 +40,7 @@ enum Filters{
     PixelSort,
     Mask,
     Blur,
+    Pixelate,
 }
 
 
@@ -61,13 +63,15 @@ impl eframe::App for EditorWidget{
                    .show_ui(ui, |ui|{
                        ui.selectable_value(&mut self.hovered_filter, Filters::PixelSort, "pixelsort");
                        ui.selectable_value(&mut self.hovered_filter, Filters::Mask, "mask");
-                       ui.selectable_value(&mut self.hovered_filter, Filters::Blur, "bluie");
+                       ui.selectable_value(&mut self.hovered_filter, Filters::Blur, "blur");
+                       ui.selectable_value(&mut self.hovered_filter, Filters::Pixelate, "pixelate");
                    });
                 if ui.button("add filter").clicked(){
                     self.filterlist.push(match self.hovered_filter {
                         Filters::PixelSort=>Box::new(PixelSort::make_with_id(rand::random::<u32>().to_string())),
                         Filters::Mask=>Box::new(Mask::make_with_id(rand::random::<u32>().to_string())),
-                        Filters::Blur=>Box::new(Blur::default())
+                        Filters::Blur=>Box::new(Blur::default()),
+                        Filters::Pixelate=>Box::new(PixelateFilter::default()),
                     })
                 }
 
@@ -75,7 +79,7 @@ impl eframe::App for EditorWidget{
             ui.heading("filters");
 
 
-            //remove widgets
+            //remove widgets that are in the remove queue
             for item in &self.widget_remove_queue{
                 self.filterlist.remove(*item);
             }
@@ -85,6 +89,7 @@ impl eframe::App for EditorWidget{
             for i in &mut self.filterlist{
                 //widgets are removed by adding them to a remove queue they are deleted next cycle
                 //this is the way it is because of how rust handles mutation
+
                 if ui.button("remove filter").clicked(){
                     self.widget_remove_queue.push(index);
                 }
@@ -97,9 +102,12 @@ impl eframe::App for EditorWidget{
                 let img = image::open(&self.filename).unwrap();
                 let mut image=img.clone().into_rgb8();
 
+                //giving &mut image would imcrease performance
                 for i in &mut self.filterlist{
                     image=i.apply_filter(image);
                 }
+
+
                 //move this to function
                 match image.save("./images/new.png")  {
                     Ok(_a)=>(),
