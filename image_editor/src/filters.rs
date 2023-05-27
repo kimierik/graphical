@@ -1,5 +1,7 @@
 
 
+use image::ImageBuffer;
+
 use crate::imagefilter;
 
 
@@ -65,6 +67,77 @@ impl PixelSort{
 
 
 
+    fn loop_body(&mut self,
+                 asdf:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
+                 mask:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
+                 x:u32,
+                 y:u32,
+                 mask_last:&mut u32,
+                 mask_first:&mut u32,
+                 buffer:&mut Vec<image::Rgb<u8>>,
+                 maskmax:f32,
+                 maskmin:f32,
+
+    ){
+
+
+        let pix=mask.get_pixel_mut(x, y);
+
+        let lum=match self.sorting_method {
+            SortMethod::Vibrance=>rgb_to_hsl(&*pix).2,
+            SortMethod::Hue=>rgb_to_hsl(&*pix).0,
+            SortMethod::Saturation=>rgb_to_hsl(&*pix).1,
+
+            //a.0 = rgb array a.0[0] =red
+            SortMethod::Red=>pix.0[0] as f32,
+            SortMethod::Green=>pix.0[1] as f32,
+            SortMethod::Blue=>pix.0[2] as f32,
+
+        };
+
+        //mask
+        //we need to check first changed and last changed
+        if lum <maskmax && lum > maskmin {
+            if *mask_first==99999999{
+                *mask_first=x;
+            }
+            *pix = image::Rgb([255,255,255]);
+            let pixel= asdf.get_pixel_mut(x, y);
+            buffer.push(*pixel);
+            *mask_last=x;
+        }else{
+            *pix = image::Rgb([0,0,0]);
+        }
+    }
+
+    fn sort_and_reassign(&mut self,
+                mask:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
+                asdf:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
+                mask_last:u32,
+                mask_first:u32,
+                buffer:&mut Vec<image::Rgb<u8>>,
+                y:u32,
+    ){
+
+            //sort
+            self.sort_pixel_vector(buffer);
+
+            //reassign
+            let mut ind=0;
+            for x in mask_first..mask_last {
+                //mask pixel
+                let mpix=mask.get_pixel_mut(x, y);
+                if mpix.0[0]+mpix.0[1]+mpix.0[2]!=0{
+                    let pixel= asdf.get_pixel_mut(x, y);
+                    *pixel=buffer[ind];
+                    ind+=1;
+                }
+            }
+
+    }
+
+
+
 }
 
 
@@ -114,50 +187,10 @@ impl imagefilter::ImageFilter for PixelSort{
             let mut mask_last:u32=0;
 
             for x in minx..maxx{
-                let pix=mask.get_pixel_mut(x, y);
-
-                let lum=match self.sorting_method {
-                    SortMethod::Vibrance=>rgb_to_hsl(&*pix).2,
-                    SortMethod::Hue=>rgb_to_hsl(&*pix).0,
-                    SortMethod::Saturation=>rgb_to_hsl(&*pix).1,
-
-                    //a.0 = rgb array a.0[0] =red
-                    SortMethod::Red=>pix.0[0] as f32,
-                    SortMethod::Green=>pix.0[1] as f32,
-                    SortMethod::Blue=>pix.0[2] as f32,
-                    
-                };
-
-                //mask
-                //we need to check first changed and last changed 
-                if lum <maskmax && lum > maskmin { 
-                    if mask_first==99999999{
-                        mask_first=x;
-                    }
-                    *pix = image::Rgb([255,255,255]);
-                    let pixel= asdf.get_pixel_mut(x, y);
-                    buffer.push(*pixel);
-                    mask_last=x;
-                }else{
-                    *pix = image::Rgb([0,0,0]);
-                }
-
+                self.loop_body(&mut asdf,&mut mask,x,y,&mut mask_first,&mut mask_last,&mut buffer,maskmax,maskmin);
             }
+            self.sort_and_reassign(&mut mask, &mut asdf, mask_last, mask_first, &mut buffer,  y);
 
-            //sort
-            self.sort_pixel_vector(&mut buffer);
-
-            //reassign
-            let mut ind=0;
-            for x in mask_first..mask_last {
-                //mask pixel
-                let mpix=mask.get_pixel_mut(x, y);
-                if mpix.0[0]+mpix.0[1]+mpix.0[2]!=0{
-                    let pixel= asdf.get_pixel_mut(x, y);
-                    *pixel=buffer[ind];
-                    ind+=1;
-                }
-            }
         }
         asdf
     }
