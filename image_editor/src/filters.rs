@@ -22,6 +22,12 @@ pub enum SortMethod{
     Blue,
 }
 
+#[derive(Debug,Clone, Copy, PartialEq)]
+pub enum SortDirection{
+    Vertical,
+    Horizontal
+}
+
 
 impl std::fmt::Display for SortMethod {
     fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result{
@@ -29,6 +35,11 @@ impl std::fmt::Display for SortMethod {
     }
 }
 
+impl std::fmt::Display for SortDirection {
+    fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result{
+        write!(f,"{:?}",self)
+    }
+}
 
 
 pub struct PixelSort{
@@ -38,6 +49,8 @@ pub struct PixelSort{
 
     min_mask:f32,
     max_mask:f32,
+
+    sort_direction: SortDirection,
 
 }
 
@@ -72,8 +85,8 @@ impl PixelSort{
                  mask:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
                  x:u32,
                  y:u32,
-                 mask_last:&mut u32,
                  mask_first:&mut u32,
+                 mask_last:&mut u32,
                  buffer:&mut Vec<image::Rgb<u8>>,
                  maskmax:f32,
                  maskmin:f32,
@@ -99,42 +112,23 @@ impl PixelSort{
         //we need to check first changed and last changed
         if lum <maskmax && lum > maskmin {
             if *mask_first==99999999{
-                *mask_first=x;
+                match self.sort_direction {
+                    SortDirection::Horizontal=> *mask_first=x,
+                    SortDirection::Vertical=> *mask_first=y,
+                }
             }
             *pix = image::Rgb([255,255,255]);
             let pixel= asdf.get_pixel_mut(x, y);
             buffer.push(*pixel);
-            *mask_last=x;
+                match self.sort_direction {
+                    SortDirection::Horizontal=> *mask_last=x,
+                    SortDirection::Vertical=> *mask_last=y,
+                }
         }else{
             *pix = image::Rgb([0,0,0]);
         }
     }
 
-    fn sort_and_reassign(&mut self,
-                mask:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
-                asdf:&mut ImageBuffer<image::Rgb<u8>, Vec<u8>>,
-                mask_last:u32,
-                mask_first:u32,
-                buffer:&mut Vec<image::Rgb<u8>>,
-                y:u32,
-    ){
-
-            //sort
-            self.sort_pixel_vector(buffer);
-
-            //reassign
-            let mut ind=0;
-            for x in mask_first..mask_last {
-                //mask pixel
-                let mpix=mask.get_pixel_mut(x, y);
-                if mpix.0[0]+mpix.0[1]+mpix.0[2]!=0{
-                    let pixel= asdf.get_pixel_mut(x, y);
-                    *pixel=buffer[ind];
-                    ind+=1;
-                }
-            }
-
-    }
 
 
 
@@ -150,6 +144,7 @@ impl Default for PixelSort{
             max_mask:250.0,
             min_mask:100.0,
             sorting_method:SortMethod::Vibrance,
+            sort_direction:SortDirection::Horizontal,
         }
     }
 }
@@ -179,18 +174,71 @@ impl imagefilter::ImageFilter for PixelSort{
         let mut mask= asdf.clone();
 
         //loop all rows
-        for y in miny..maxy{
-            let mut buffer:Vec<image::Rgb<u8>>=vec![];
 
-            //first and last changed value in the mask
-            let mut mask_first:u32=99999999;
-            let mut mask_last:u32=0;
+        match self.sort_direction {
+            SortDirection::Horizontal=>
+            {
 
-            for x in minx..maxx{
-                self.loop_body(&mut asdf,&mut mask,x,y,&mut mask_first,&mut mask_last,&mut buffer,maskmax,maskmin);
-            }
-            self.sort_and_reassign(&mut mask, &mut asdf, mask_last, mask_first, &mut buffer,  y);
+                for y in miny..maxy{
+                    let mut buffer:Vec<image::Rgb<u8>>=vec![];
 
+                    //first and last changed value in the mask
+                    let mut mask_first:u32=99999999;
+                    let mut mask_last:u32=0;
+
+                    for x in minx..maxx{
+                        self.loop_body(&mut asdf,&mut mask,x,y,&mut mask_first,&mut mask_last,&mut buffer,maskmax,maskmin);
+                    }
+
+                    //sort
+                    self.sort_pixel_vector(&mut buffer);
+
+                    //reassign
+                    let mut ind=0;
+                    for x in mask_first..mask_last {
+                        //mask pixel
+                        let mpix=mask.get_pixel_mut(x, y);
+                        if mpix.0[0]+mpix.0[1]+mpix.0[2]!=0{
+                            let pixel= asdf.get_pixel_mut(x, y);
+                            *pixel=buffer[ind];
+                            ind+=1;
+                        }
+                    }
+                }
+            },
+
+            SortDirection::Vertical=>
+            {
+                for x in minx..maxx{
+                    let mut buffer:Vec<image::Rgb<u8>>=vec![];
+
+                    //first and last changed value in the mask
+                    let mut mask_first:u32=99999999;
+                    let mut mask_last:u32=0;
+
+                    for y in miny..maxy{
+                        self.loop_body(&mut asdf,&mut mask,x,y,&mut mask_first,&mut mask_last,&mut buffer,maskmax,maskmin);
+                    }
+                    //sort
+                    self.sort_pixel_vector(&mut buffer);
+
+                    //reassign
+                    let mut ind=0;
+                    println!("{} {}" ,mask_first,mask_last);
+                    for y in mask_first..mask_last {
+                        //mask pixel
+                        let mpix=mask.get_pixel_mut(x, y);
+                        if mpix.0[0]+mpix.0[1]+mpix.0[2]!=0{
+                            let pixel= asdf.get_pixel_mut(x, y);
+                            *pixel=buffer[ind];
+                            ind+=1;
+                        }
+                    }
+
+                }
+
+
+            },
         }
         asdf
     }
@@ -227,6 +275,15 @@ impl imagefilter::ImageFilter for PixelSort{
                    ui.selectable_value(&mut self.sorting_method, SortMethod::Red, "red");
                    ui.selectable_value(&mut self.sorting_method, SortMethod::Green, "green");
                    ui.selectable_value(&mut self.sorting_method, SortMethod::Blue, "blue");
+           });
+        });
+
+        ui.push_id(&self.widgetid, |ui|{
+            egui::ComboBox::from_label(format!("sorting direction {}",self.widgetid))
+               .selected_text(format!("{}",self.sort_direction))
+               .show_ui(ui, |ui|{
+                   ui.selectable_value(&mut self.sort_direction, SortDirection::Horizontal, "horizontal");
+                   ui.selectable_value(&mut self.sort_direction, SortDirection::Vertical, "vertical");
            });
         });
 
