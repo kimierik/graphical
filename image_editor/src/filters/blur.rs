@@ -1,7 +1,6 @@
 
 
-
-use std::{vec,println};
+use std::vec;
 
 use crate::imagefilter::ImageFilter;
 
@@ -44,7 +43,7 @@ impl ImageFilter for Blur{
                     let pix=newimage.get_pixel_mut(x, y);
                     *pix=self.get_average(&ofs);
                 }else{
-                    println!("offsets is 0 len");
+                    //println!("offsets is 0 len");
                 }
             }
         }
@@ -55,8 +54,8 @@ impl ImageFilter for Blur{
     }
 
     fn spawn_filter_widget(&mut self,ui:&mut egui::Ui) {
-        ui.heading("mask");
-        ui.add(egui::Slider::new(&mut self.radius, 0..=10).text("blur radius"));
+        ui.heading("Blur");
+        ui.add(egui::Slider::new(&mut self.radius, 1..=10).text("blur radius"));
     }
 
 }
