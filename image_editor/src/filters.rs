@@ -51,6 +51,7 @@ pub struct PixelSort{
     max_mask:f32,
 
     sort_direction: SortDirection,
+    invert_sort:bool,
 
 }
 
@@ -65,16 +66,30 @@ impl PixelSort{
 
 
     fn sort_pixel_vector(&self,vector: &mut Vec<image::Rgb<u8>>){
-        match self.sorting_method {
-            SortMethod::Vibrance=>vector.sort_by(|a,b| rgb_to_hsl(a).2.partial_cmp(&rgb_to_hsl(b).2).unwrap()),
-            SortMethod::Hue=>vector.sort_by(|a,b| rgb_to_hsl(a).0.partial_cmp(&rgb_to_hsl(b).0).unwrap()),
-            SortMethod::Saturation=>vector.sort_by(|a,b| rgb_to_hsl(a).1.partial_cmp(&rgb_to_hsl(b).1).unwrap()),
+        if !self.invert_sort{
+            match self.sorting_method {
+                SortMethod::Vibrance=>vector.sort_by(|a,b| rgb_to_hsl(a).2.partial_cmp(&rgb_to_hsl(b).2).unwrap()),
+                SortMethod::Hue=>vector.sort_by(|a,b| rgb_to_hsl(a).0.partial_cmp(&rgb_to_hsl(b).0).unwrap()),
+                SortMethod::Saturation=>vector.sort_by(|a,b| rgb_to_hsl(a).1.partial_cmp(&rgb_to_hsl(b).1).unwrap()),
 
-            //a.0 = rgb array a.0[0] =red
-            SortMethod::Red=>vector.sort_by(|a,b| a.0[0].partial_cmp(&b.0[0]).unwrap()),
-            SortMethod::Green=>vector.sort_by(|a,b| a.0[1].partial_cmp(&b.0[1]).unwrap()),
-            SortMethod::Blue=>vector.sort_by(|a,b| a.0[2].partial_cmp(&b.0[2]).unwrap()),
+                //a.0 = rgb array a.0[0] =red
+                SortMethod::Red=>vector.sort_by(|a,b| a.0[0].partial_cmp(&b.0[0]).unwrap()),
+                SortMethod::Green=>vector.sort_by(|a,b| a.0[1].partial_cmp(&b.0[1]).unwrap()),
+                SortMethod::Blue=>vector.sort_by(|a,b| a.0[2].partial_cmp(&b.0[2]).unwrap()),
 
+            }
+        }else{
+            match self.sorting_method {
+                SortMethod::Vibrance=>vector.sort_by(|b,a| rgb_to_hsl(a).2.partial_cmp(&rgb_to_hsl(b).2).unwrap()),
+                SortMethod::Hue=>vector.sort_by(|b,a| rgb_to_hsl(a).0.partial_cmp(&rgb_to_hsl(b).0).unwrap()),
+                SortMethod::Saturation=>vector.sort_by(|b,a| rgb_to_hsl(a).1.partial_cmp(&rgb_to_hsl(b).1).unwrap()),
+
+                //a.0 = rgb array a.0[0] =red
+                SortMethod::Red=>vector.sort_by(|b,a| a.0[0].partial_cmp(&b.0[0]).unwrap()),
+                SortMethod::Green=>vector.sort_by(|b,a| a.0[1].partial_cmp(&b.0[1]).unwrap()),
+                SortMethod::Blue=>vector.sort_by(|b,a| a.0[2].partial_cmp(&b.0[2]).unwrap()),
+
+            }
         }
     }
 
@@ -145,6 +160,7 @@ impl Default for PixelSort{
             min_mask:100.0,
             sorting_method:SortMethod::Vibrance,
             sort_direction:SortDirection::Horizontal,
+            invert_sort:false,
         }
     }
 }
@@ -224,7 +240,6 @@ impl imagefilter::ImageFilter for PixelSort{
 
                     //reassign
                     let mut ind=0;
-                    println!("{} {}" ,mask_first,mask_last);
                     for y in mask_first..mask_last {
                         //mask pixel
                         let mpix=mask.get_pixel_mut(x, y);
@@ -286,6 +301,7 @@ impl imagefilter::ImageFilter for PixelSort{
                    ui.selectable_value(&mut self.sort_direction, SortDirection::Vertical, "vertical");
            });
         });
+        ui.add(egui::Checkbox::new(&mut self.invert_sort,"invert"));
 
         
     }
